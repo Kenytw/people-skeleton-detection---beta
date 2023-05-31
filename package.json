@@ -2,10 +2,8 @@
   "name": "reactapp",
   "version": "0.1.0",
   "private": true,
-  "//proxy": "http://34.71.62.223:5000",
   "proxy": "http://127.0.0.1:5000",
   "dependencies": {
-    "@techstark/opencv-js": "^4.7.0-release.1",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
