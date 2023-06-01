@@ -444,11 +444,18 @@ function App() {
       try {
           const begin = Date.now();
 
-          let canvas = document.getElementById('canvasOutput');
-          canvas.getContext('2d').drawImage(video, 0, 0, video.videoWidth, video.videoHeight)
+          const uploadImageWidth = 1080;
 
-          let type = 'image/png';
-          let data = document.getElementById('canvasOutput').toDataURL(type);
+          let canvas = document.getElementById('canvasOutput');
+          const canvasWidth = video.videoWidth * uploadImageWidth / video.videoWidth;
+          const canvasHeight = video.videoHeight * uploadImageWidth / video.videoWidth;
+          canvas.width = canvasWidth;
+          canvas.height = canvasHeight;
+
+          canvas.getContext('2d').drawImage(video, 0, 0, video.videoWidth * uploadImageWidth / video.videoWidth, video.videoHeight * uploadImageWidth / video.videoWidth)
+
+          let type = 'image/jpeg';
+          let data = canvas.toDataURL(type);
           data = data.replace('data:' + type + ';base64,', '');
 
           let str = "" + video_frame;
@@ -459,8 +466,9 @@ function App() {
           if (video_frame === keyForStartUpload) sendImage();
           video_frame ++;
 
-          let delay = 1000 / FPS - (Date.now() - begin);
+          let delay = 8000 / FPS - (Date.now() - begin);
           if (delay < 0) delay = 100;
+          //console.log(delay);
           myTimeout = setTimeout(processVideo, delay);
       } catch (error) {
           console.log(error);
