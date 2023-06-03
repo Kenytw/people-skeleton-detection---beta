@@ -20,7 +20,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-size: calc(10px + 2vmin);
+  font-size: calc(8px + 2vmin);
   color: white;
 }
 
@@ -39,4 +39,27 @@
 
 .img-container {
   overflow: hidden;
+}
+
+.img-intro {
+  width: 188px;
+  height: 188px;
+  transform: scale(2.5, 3.33) translate(-30px, -10px);
+  align-self: center;
+}
+
+a {
+  color: white;
+  text-decoration: none;
+}
+
+.main-table {
+  width: 380px;
+  border: 0 solid #ddd;
+}
+
+.intro-div {
+  overflow: hidden;
+  width: 190px;
+  align-items: center;
 }
