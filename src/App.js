@@ -2,10 +2,17 @@ import './App.css';
 import {useState, useEffect} from 'react';
 import React from "react";
 import logo from "./logo.svg";
+import img_ori_1 from "./images/original_1.jpg";
+import img_ori_2 from "./images/original_2.jpg";
+import img_ori_3 from "./images/original_3.jpg";
+import img_res_1 from "./images/result_1.jpeg";
+import img_res_2 from "./images/result_2.jpeg";
+import img_res_3 from "./images/result_3.jpeg";
+import github_logo from "./images/github-mark-white.png";
 
 function App() {
   const [videoSrc, setSrc] = useState('');
-  const [status, setStatus] = useState('none');
+  const [status, setStatus] = useState('please choose a video');
   const [imgSrc, setImgSrc] = useState(logo);
   const [folder_name, setFolderName] = useState('');
   const [playSpeed, setPlaySpeed] = useState(parseFloat(200).toFixed(2));
@@ -26,17 +33,18 @@ function App() {
   let imgMoveY = 0;
   let imgData = {};
   let imgKey = 1;
-  let keyForStartUpload = 20;
+  let keyForStartUpload = 10;
   let sendingImgFlag = false;
+  let imgWidth = 380;
+  let processingFlag = false;
+  let processingMark = 1;
 
   useEffect(() => {
       const onPageLoad = () => {
-          document.addEventListener('fullscreenchange', onFullscreenChange);
-
           video = document.getElementById('videoElement');
 
-          video.width = 500;
-          video.height =350;
+          video.width = 380;
+          video.height =266;
 
           video.addEventListener('loadedmetadata', loaded);
           video.addEventListener('play', start);
@@ -60,6 +68,14 @@ function App() {
 
           document.getElementById('previous_btn').onclick = function() {
               previousResult();
+          };
+
+          document.getElementById('first_btn').onclick = function() {
+              firstResult();
+          };
+
+          document.getElementById('last_btn').onclick = function() {
+              lastResult();
           };
 
           document.getElementById('process_btn').onclick = function() {
@@ -87,6 +103,7 @@ function App() {
           };
 
           document.getElementById('choose_video_btn').onclick = function() {
+              setStatus('please choose a video');
               showVideoArea();
               hiddenResultArea();
           };
@@ -107,7 +124,9 @@ function App() {
 
   function playResult() {
       if (json_obj !== undefined) {
+          if (result_frame === json_obj.files.length-1) result_frame = 0;
           hiddenVideoArea();
+          document.getElementById('stop_btn').disabled = false;
           showResult();
       }
   }
@@ -115,8 +134,11 @@ function App() {
   function stopPlayResult() {
       clearTimeout(playTimeout);
       document.getElementById('show_again_btn').disabled = false;
+      document.getElementById('stop_btn').disabled = true;
       document.getElementById('next_btn').disabled = false;
       document.getElementById('previous_btn').disabled = false;
+      document.getElementById('first_btn').disabled = false;
+      document.getElementById('last_btn').disabled = false;
       document.getElementById('zoom_in_btn').disabled = false;
       document.getElementById('zoom_out_btn').disabled = false;
   }
@@ -190,6 +212,8 @@ function App() {
       document.getElementById('stop_btn').disabled = true;
       document.getElementById('next_btn').disabled = true;
       document.getElementById('previous_btn').disabled = true;
+      document.getElementById('first_btn').disabled = true;
+      document.getElementById('last_btn').disabled = true;
       document.getElementById('plus_speed_btn').disabled = true;
       document.getElementById('minus_speed_btn').disabled = true;
       document.getElementById('zoom_in_btn').disabled = true;
@@ -204,6 +228,8 @@ function App() {
       document.getElementById('stop_btn').disabled = false;
       document.getElementById('next_btn').disabled = false;
       document.getElementById('previous_btn').disabled = false;
+      document.getElementById('first_btn').disabled = false;
+      document.getElementById('last_btn').disabled = false;
       document.getElementById('plus_speed_btn').disabled = false;
       document.getElementById('minus_speed_btn').disabled = false;
       document.getElementById('zoom_in_btn').disabled = false;
@@ -211,7 +237,7 @@ function App() {
   }
 
   function createFolder() {
-      fetch('/createFolder')
+      fetch('/api/createFolder')
           .then(response => response.text())
           .then(data => {
               setFolderName(data);
@@ -220,7 +246,7 @@ function App() {
 
   function deleteFolder() {
     if (document.getElementById('folder_name').innerText.trim() !== '') {
-        let url = '/deleteFolder?folder_name=' + document.getElementById('folder_name').innerText;
+        let url = '/api/deleteFolder?folder_name=' + document.getElementById('folder_name').innerText;
         fetch(url)
             .then(response => response.text())
             //.then(data => setStatus(data))
@@ -287,7 +313,7 @@ function App() {
           if (imgKey < parseInt(key)) {
               const formData = new FormData();
               formData.append('image', imgData[key]);
-              let url = '/sendImage?video_frame=' + key + '&folder_name=' + document.getElementById('folder_name').innerText;
+              let url = '/api/sendImage?video_frame=' + key + '&folder_name=' + document.getElementById('folder_name').innerText;
               const response = await fetch(url, {
                   method: 'POST',
                   body: formData
@@ -309,16 +335,12 @@ function App() {
       }else{
           sendingImgFlag = false;
           if (!streaming) {
-              setStatus('total uploaded');
+              setStatus('please click "process data"');
               imgData = {};
               imgKey = 1;
               enable_all_btn();
           }
       }
-  }
-
-  function onFullscreenChange() {
-
   }
 
   function hiddenResultArea() {
@@ -346,23 +368,42 @@ function App() {
   }
   async function processResult() {
       hiddenVideoArea();
-      setStatus('result processing');
+      processingFlag = true;
+      showProcessingBar();
       disable_all_btn();
-      let url = '/detect?folder_name=' + document.getElementById('folder_name').innerText;
-      await fetch(url)
+      let url = '/api/detect?folder_name=' + document.getElementById('folder_name').innerText;
+      await fetch(url, {timeout: 8000})
           .then(response => response.json()
           .then(data => {
-              setStatus('result done');
+              processingFlag = false;
               json_obj = data;
-          })).catch(error => console.log(error.messages));
+          })).catch(error => console.log('API error for detecting'));
 
       if (json_obj !== undefined) {
           document.getElementById('file_select').disabled = false;
           result_frame = 0;
+          setStatus('result showing');
           showResult();
       }
       showResultArea();
       enable_all_btn();
+  }
+
+  function showProcessingBar() {
+      let mark = '';
+      let i = 1;
+      while (i <= processingMark) {
+          mark = mark + '.';
+          i ++;
+      }
+      setStatus('data processing' + mark);
+      processingMark ++;
+      if (processingMark === 7) processingMark =1;
+      if (processingFlag) {
+          setTimeout(showProcessingBar, 500);
+      }else{
+          setStatus('result showing');
+      }
   }
 
   function nextResult() {
@@ -371,7 +412,7 @@ function App() {
       setImgSrc(JSON.stringify(json_obj.files[result_frame].data).replaceAll('"',''));
       const img_element = document.getElementById('imgElement');
       img_element.style.transform = 'scaleX(-1)';
-      img_element.width = 500;
+      img_element.width = imgWidth;
 
       zoomRate = 1;
       mouseDownX = 0;
@@ -382,11 +423,39 @@ function App() {
 
   function previousResult() {
       result_frame = result_frame - 1;
-      if (result_frame <= 0) result_frame = json_obj.files.length-2;
+      if (result_frame <= 0) result_frame = json_obj.files.length-1;
       setImgSrc(JSON.stringify(json_obj.files[result_frame].data).replaceAll('"',''));
       const img_element = document.getElementById('imgElement');
       img_element.style.transform = 'scaleX(-1)';
-      img_element.width = 500;
+      img_element.width = imgWidth;
+
+      zoomRate = 1;
+      mouseDownX = 0;
+      mouseDownY = 0;
+      imgMoveX = 0;
+      imgMoveY = 0;
+  }
+
+  function firstResult() {
+      result_frame = 0;
+      setImgSrc(JSON.stringify(json_obj.files[result_frame].data).replaceAll('"',''));
+      const img_element = document.getElementById('imgElement');
+      img_element.style.transform = 'scaleX(-1)';
+      img_element.width = imgWidth;
+
+      zoomRate = 1;
+      mouseDownX = 0;
+      mouseDownY = 0;
+      imgMoveX = 0;
+      imgMoveY = 0;
+  }
+
+  function lastResult() {
+      result_frame = json_obj.files.length-1;
+      setImgSrc(JSON.stringify(json_obj.files[result_frame].data).replaceAll('"',''));
+      const img_element = document.getElementById('imgElement');
+      img_element.style.transform = 'scaleX(-1)';
+      img_element.width = imgWidth;
 
       zoomRate = 1;
       mouseDownX = 0;
@@ -404,26 +473,32 @@ function App() {
 
       if (result_frame < json_obj.files.length) {
           document.getElementById('show_again_btn').disabled = true;
+          document.getElementById('stop_btn').disabled = false;
           document.getElementById('next_btn').disabled = true;
           document.getElementById('previous_btn').disabled = true;
+          document.getElementById('first_btn').disabled = true;
+          document.getElementById('last_btn').disabled = true;
           document.getElementById('zoom_in_btn').disabled = true;
           document.getElementById('zoom_out_btn').disabled = true;
           const begin = Date.now();
           setImgSrc(JSON.stringify(json_obj.files[result_frame].data).replaceAll('"',''));
           const img_element = document.getElementById('imgElement');
           img_element.style.transform = 'scaleX(-1)';
-          img_element.width = 500;
+          img_element.width = imgWidth;
           result_frame ++;
           const delay = playSpeed - (Date.now() - begin) + play_delay;
           setPlaySpeed(parseFloat(delay).toFixed(2));
           playTimeout = setTimeout(showResult, delay);
       }else{
           document.getElementById('show_again_btn').disabled = false;
+          document.getElementById('stop_btn').disabled = true;
           document.getElementById('next_btn').disabled = false;
           document.getElementById('previous_btn').disabled = false;
+          document.getElementById('first_btn').disabled = false;
+          document.getElementById('last_btn').disabled = false;
           document.getElementById('zoom_in_btn').disabled = false;
           document.getElementById('zoom_out_btn').disabled = false;
-          result_frame = 0;
+          result_frame = result_frame - 1;
       }
   }
 
@@ -479,10 +554,57 @@ function App() {
     <div className='App'>
       <header className='App-header'>
         <div>
-          <table style={{width: 500}}>
+          <table className='main-table'>
               <tbody>
                   <tr>
-                      <td width='100%' id='videoTD1'>
+                      <td id='introTD1' colSpan='2'>
+                          <div align='left' style={{fontSize: "24px"}}>
+                              <b>people skeleton detection - beta</b>
+                          </div>
+                          <div align='right' style={{fontSize: "12px"}}>
+                              <a rel='noreferrer' href='https://github.com/Kenytw/flask_for_people_skeleton_detection' target='_blank'>python flask code</a>
+                              &nbsp;/ <a rel='noreferrer' href='https://github.com/Kenytw/reactjs_demo_call_flask.git' target='_blank'>reactjs app code</a> <img src={github_logo} alt='GitHub' style={{width: "18px"}} />
+                              <br/>&nbsp;
+                          </div>
+                          <div><button style={{width: "300px", height: "30px"}} onClick={function (){
+                              document.getElementById('introTD1').hidden = true;
+                              document.getElementById('introTD2').hidden = true;
+                              document.getElementById('introTD3').hidden = true;
+                              document.getElementById('videoTD1').hidden = false;
+                              document.getElementById('videoTD2').hidden = false;
+                              document.getElementById('videoTD3').hidden = false;
+                              document.getElementById('statusDiv').hidden = false;
+                          }}>click here to start yours with a video</button><br/>&nbsp;</div>
+                      </td>
+                  </tr>
+                  <tr>
+                      <td id='introTD2'>
+                          <div>origin</div>
+                          <div className='intro-div'>
+                              <img className='img-intro' src={img_ori_1} alt='' />
+                          </div>
+                          <div className='intro-div'>
+                              <img className='img-intro' src={img_ori_2} alt='' />
+                          </div>
+                          <div className='intro-div'>
+                              <img className='img-intro' src={img_ori_3} alt='' />
+                          </div>
+                      </td>
+                      <td id='introTD3'>
+                          <div>result</div>
+                          <div className='intro-div'>
+                              <img className='img-intro' src={img_res_1} alt='' />
+                          </div>
+                          <div className='intro-div'>
+                              <img className='img-intro' src={img_res_2} alt='' />
+                          </div>
+                          <div className='intro-div'>
+                              <img className='img-intro' src={img_res_3} alt='' />
+                          </div>
+                      </td>
+                  </tr>
+                  <tr>
+                      <td id='videoTD1' hidden colSpan='2'>
                           <canvas id='canvasOutput' hidden></canvas>
                           <video id='videoElement' src={videoSrc} controls autoPlay>
                           Sorry, your browser doesn't support embedded videos.
@@ -490,48 +612,50 @@ function App() {
                       </td>
                   </tr>
                   <tr>
-                      <td id='videoTD2'>
+                      <td id='videoTD2' hidden colSpan='2'>
                           video: <input type='file' id='file_select' />
                       </td>
                   </tr>
                   <tr>
-                      <td id='videoTD3'>
-                          <button id='process_btn'>process data</button>
-                          <button id='clean_btn'>clean all result</button>
+                      <td id='videoTD3' hidden colSpan='2'>
+                          <button id='process_btn' disabled>process data</button>
+                          <button id='clean_btn' disabled>clean all result</button>
                       </td>
                   </tr>
                   <tr>
-                      <td id='resultTD1' hidden>
-                          <div className='img-container' id='imgDiv' width='100%'>
-                            <img id='imgElement' src={imgSrc} alt='result' width='400px'/>
+                      <td id='resultTD1' hidden colSpan='2'>
+                          <div className='img-container' style={{width: "100%"}} id='imgDiv'>
+                            <img id='imgElement' src={imgSrc} width={380} alt='result' />
                           </div>
                       </td>
                   </tr>
                   <tr>
-                      <td  id='resultTD2' hidden>
+                      <td  id='resultTD2' hidden colSpan='2'>
                           play speed: {playSpeed} FPS
                       </td>
                   </tr>
                   <tr>
-                      <td id='resultTD3' hidden>
+                      <td id='resultTD3' hidden colSpan='2'>
                           <button id='show_again_btn'>play</button>
-                          <button id='stop_btn'>stop</button>
+                          <button id='stop_btn'>stop</button>&nbsp;
+                          <button id='first_btn'>first</button>
                           <button id='previous_btn'>previous</button>
-                          <button id='next_btn'>next</button><br/>
+                          <button id='next_btn'>next</button>
+                          <button id='last_btn'>last</button><br/>
                           <button id='plus_speed_btn'>+ play speed</button>
-                          <button id='minus_speed_btn'>- play speed</button>
+                          <button id='minus_speed_btn'>- play speed</button>&nbsp;
                           <button id='zoom_in_btn'>zoom in</button>
                           <button id='zoom_out_btn'>zoom out</button><br/>
-                          <button id='choose_video_btn'>choose video again</button>
+                          <button id='choose_video_btn'>choose another video</button>
                       </td>
                   </tr>
               </tbody>
           </table>
         </div>
-          <div>
-            <br/>status: {status}
+        <div id='statusDiv' hidden>
+            status: {status}
             <div id='folder_name' hidden>{folder_name}</div>
-          </div>
+        </div>
       </header>
     </div>
   );
