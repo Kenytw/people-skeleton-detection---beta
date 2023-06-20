@@ -1,21 +1,18 @@
-import './App.css';
-import { useEffect } from 'react';
 import React from "react";
-import img_ori_1 from "./images/original_1.jpg";
-import img_ori_2 from "./images/original_2.jpg";
-import img_ori_3 from "./images/original_3.jpg";
-import img_res_1 from "./images/result_1.jpeg";
-import img_res_2 from "./images/result_2.jpeg";
-import img_res_3 from "./images/result_3.jpeg";
-import { BrowserView, MobileView, isBrowser, isMobile } from 'react-device-detect';
+import { useEffect } from "react";
+import '../App.css';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import Stats from 'three/examples/jsm/libs/stats.module';
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
-import body_pose from './components/data/data.json';
+import { useSearchParams } from "react-router-dom";
+import loading_gif from '../images/loading.gif';
 
-function App() {
+function Show3d() {
+    const [searchparams] = useSearchParams();
+    let folder_name = searchparams.get('folder_name');
+    let body_pose;
     let scene, camera, renderer, controls, stats;
     let model, skeleton, settings;
     let frame = 0;
@@ -26,23 +23,39 @@ function App() {
     let delta;
     let pause = false;
     let panel;
-    let render_width = 380;
-    let render_height = 579;
-
-    if (isMobile) {
-        render_width = 190;
-        render_height = render_height * 190 / render_width;
-    }
+    let render_width = window.innerWidth * 0.9;
+    let render_height = 600;
 
     useEffect(() => {
-        init();
-        animate();
-    }, [init, animate]);
+        if (folder_name !== null) getJson();
+        return() => dispatch();
+    }, [folder_name]);
+
+    function dispatch() {
+        if (folder_name !== null) {
+            let url = '/api/deleteFolder?folder_name=' + folder_name;
+            fetch(url)
+                .then(response => response.text())
+                .catch(error => console.log(error));
+        }
+
+        if (panel) panel.destroy();
+    }
+
+    async function getJson() {
+        let url = '/api/show3d?folder_name=' + folder_name;
+        await fetch(url, {timeout: 8000})
+          .then(response => response.json()
+          .then(data => {
+              body_pose = data;
+              document.getElementById('load_gif').hidden = true;
+              init();
+              animate();
+          })).catch(error => console.log('API error for detecting'));
+    }
 
     function createPanel() {
-        let panel_width = 210;
-        if (isMobile) panel_width = 170;
-        panel = new GUI( { width: panel_width, autoPlace: false } );
+        panel = new GUI( { width: 210, autoPlace: false } );
         let gui_container = document.getElementById('gui_container');
         gui_container.appendChild(panel.domElement);
 
@@ -265,13 +278,13 @@ function App() {
     }
 
     function onWindowResize() {
-        //camera.aspect = window.innerWidth / window.innerHeight;
-        //camera.updateProjectionMatrix();
-        //renderer.setSize(window.innerWidth, window.innerHeight);
-        //render();
+        render_width = window.innerWidth;
+        camera.aspect = render_width / render_height;
+        camera.updateProjectionMatrix();
+        renderer.setSize(render_width, render_height);
+        render();
     }
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     function animate() {
         interval = 1000 / fps;
         requestAnimationFrame(animate);
@@ -654,93 +667,13 @@ function App() {
     }
 
     return (
-        <div className='App'>
-          <header className='App-header'>
-            <div>
-                <BrowserView>
-                  <table className='main-table-browser'>
-                      <tbody>
-                          <tr>
-                              <td>
-                                  <div>origin</div>
-                                  <div className='intro-div-browser'>
-                                      <img className='img-intro' src={img_ori_1} alt='' />
-                                  </div>
-                                  <div className='intro-div-browser'>
-                                      <img className='img-intro' src={img_ori_2} alt='' />
-                                  </div>
-                                  <div className='intro-div-browser'>
-                                      <img className='img-intro' src={img_ori_3} alt='' />
-                                  </div>
-                              </td>
-                              <td>
-                                  <div>result</div>
-                                  <div className='intro-div-browser'>
-                                      <img className='img-intro' src={img_res_1} alt='' />
-                                  </div>
-                                  <div className='intro-div-browser'>
-                                      <img className='img-intro' src={img_res_2} alt='' />
-                                  </div>
-                                  <div className='intro-div-browser'>
-                                      <img className='img-intro' src={img_res_3} alt='' />
-                                  </div>
-                              </td>
-                              <td>
-                                  <div>3d result</div>
-                                  <div id='container'></div>
-                              </td>
-                              <td style={{verticalAlign: "top", paddingTop: "30px"}}>
-                                  <div id='gui_container'></div>
-                              </td>
-                          </tr>
-                      </tbody>
-                  </table>
-                </BrowserView>
-                <MobileView>
-                  <table className='main-table-mobile'>
-                      <tbody>
-                          <tr>
-                              <td>
-                                  <div>origin</div>
-                                  <div className='intro-div-mobile'>
-                                      <img className='img-intro' src={img_ori_1} alt='' />
-                                  </div>
-                                  <div className='intro-div-mobile'>
-                                      <img className='img-intro' src={img_ori_2} alt='' />
-                                  </div>
-                                  <div className='intro-div-mobile'>
-                                      <img className='img-intro' src={img_ori_3} alt='' />
-                                  </div>
-                              </td>
-                              <td>
-                                  <div>result</div>
-                                  <div className='intro-div-mobile'>
-                                      <img className='img-intro' src={img_res_1} alt='' />
-                                  </div>
-                                  <div className='intro-div-mobile'>
-                                      <img className='img-intro' src={img_res_2} alt='' />
-                                  </div>
-                                  <div className='intro-div-mobile'>
-                                      <img className='img-intro' src={img_res_3} alt='' />
-                                  </div>
-                              </td>
-                          </tr>
-                          <tr>
-                              <td>
-                                  <div>3d result</div>
-                                  <div id='container'></div>
-                              </td>
-                              <td style={{verticalAlign: "top", paddingTop: "30px"}}>
-                                  <div id='gui_container'></div>
-                              </td>
-                          </tr>
-                      </tbody>
-                  </table>
-                </MobileView>
-            </div>
-          </header>
-        </div>
+    <div className='App'>
+        <header className='App-header'>
+            <div id='load_gif'><img src={loading_gif} alt='loading' width='20' /><br />loading</div>
+            <div id='container'><div id='gui_container'></div></div>
+        </header>
+    </div>
     );
 }
 
-export default App;
+export default Show3d;
