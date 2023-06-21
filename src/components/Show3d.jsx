@@ -23,8 +23,8 @@ function Show3d() {
     let delta;
     let pause = false;
     let panel;
-    let render_width = window.innerWidth * 0.9;
-    let render_height = 600;
+    let render_width = window.innerWidth * 0.98;
+    let render_height = 650;
 
     useEffect(() => {
         if (folder_name !== null) getJson();
@@ -312,6 +312,10 @@ function Show3d() {
 
     function setupPos() {
         poseAngles(model.hips, frame);
+        poseAngles(model.spine_2, frame);
+        poseAngles(model.neck, frame);
+        poseAngles(model.left_shoulder, frame);
+        poseAngles(model.right_shoulder, frame);
         poseAngles(model.left_arm, frame);
         poseAngles(model.left_fore_arm, frame);
         poseAngles(model.left_hand, frame);
@@ -324,7 +328,6 @@ function Show3d() {
         poseAngles(model.right_up_leg, frame);
         poseAngles(model.right_leg, frame);
         //poseAngles(model.right_foot, frame);
-        //poseAngles(model.neck, frame);
         poseAngles(model.head, frame);
 
         if (!pause) frame++;
@@ -363,36 +366,58 @@ function Show3d() {
         let point_articulation;
         let point_child;
 
-        if (joint === model.neck) {
-            point_parent = pose_hips;
-            point_articulation = pose_spine_2;
-            point_child = pose_middle_head;
+        if (joint === model.spine_2) {
+            const vec_bone = (new THREE.Vector3).subVectors(pose_spine_2, pose_hips);
 
-            const position1 = new THREE.Vector3();
-            joint.getWorldPosition(position1);
+            joint.parent.parent.rotation.x = 0;
+            if (pose_spine_2.z > pose_hips.z) {
+                joint.parent.parent.rotation.x = vec_bone.angleTo(new THREE.Vector3(0, 1, 0));
+            }else{
+                joint.parent.parent.rotation.x = -vec_bone.angleTo(new THREE.Vector3(0, 1, 0));
+            }
 
-            const vec_bone1 = (new THREE.Vector3).subVectors(point_child, point_articulation);
+            const helper_axes = new THREE.AxesHelper(80);
+            //joint.parent.parent.add(helper_axes);
 
-            const length = 1;
-            const hex = 0xffff00;
-            const arrowHelper = new THREE.ArrowHelper( vec_bone1.clone().normalize(), position1, length, hex );
-            //scene.add(arrowHelper);
+            return;
+        }else if (joint === model.left_shoulder) {
+            const vec_bone = (new THREE.Vector3).subVectors(pose_left_shoulder, pose_spine_2);
+
+            if (pose_spine_2.y > pose_left_shoulder.y) {
+                joint.rotation.x = -(Math.PI * 2 - vec_bone.angleTo(new THREE.Vector3(0, 1, 0)));
+            }else{
+                joint.rotation.x = vec_bone.angleTo(new THREE.Vector3(0, 1, 0));
+            }
 
             const helper_axes = new THREE.AxesHelper(80);
             //joint.add(helper_axes);
 
-            const vec_bone = (new THREE.Vector3).subVectors(point_child, point_articulation);
-            const vec_from = new THREE.Vector3(joint.position.x, joint.position.y, joint.position.z);
+            return;
+        }else if (joint === model.right_shoulder) {
+            const vec_bone = (new THREE.Vector3).subVectors(pose_right_shoulder, pose_spine_2);
 
-            const vec_bone_to_local = createLocalVectorWithSameDirectionChild(vec_bone, joint.parent.parent);
-            let vec_bone_from_local = createLocalVectorWithSameDirectionChild(vec_from, joint.parent.parent);
+            if (pose_spine_2.y > pose_right_shoulder.y) {
+                joint.rotation.x = vec_bone.angleTo(new THREE.Vector3(0, 1, 0));
+            }else{
+                joint.rotation.x = -(Math.PI * 2 - vec_bone.angleTo(new THREE.Vector3(0, 1, 0)));
+            }
 
-            const quat_pose_rot = new THREE.Quaternion();
-            //vec_bone_from_local = new THREE.Vector3(0, 1, 0);
-            quat_pose_rot.setFromUnitVectors(vec_bone_from_local.clone().normalize(), vec_bone_to_local.clone().normalize());
-            joint.quaternion.copy(quat_pose_rot);
-            //joint.applyQuaternion(quat_pose_rot);
-            //joint.rotation.setFromQuaternion(quat_pose_rot);
+            const helper_axes = new THREE.AxesHelper(80);
+            //joint.add(helper_axes);
+
+            return;
+        }else if (joint === model.neck) {
+            const vec_spine = (new THREE.Vector3).subVectors(pose_spine_2, pose_hips);
+            const vec_neck = (new THREE.Vector3).subVectors(pose_middle_head, pose_spine_2);
+
+            if (pose_middle_head.z > pose_spine_2.z) {
+                joint.rotation.x = -vec_neck.angleTo(vec_spine);
+            }else{
+                joint.rotation.x = vec_neck.angleTo(vec_spine);
+            }
+
+            const helper_axes = new THREE.AxesHelper(80);
+            //joint.add(helper_axes);
 
             return;
         }

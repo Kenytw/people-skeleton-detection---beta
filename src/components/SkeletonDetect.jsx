@@ -3,6 +3,8 @@ import {useState, useEffect} from 'react';
 import React from "react";
 import logo from "../logo.svg";
 import { createSearchParams, useNavigate } from "react-router-dom";
+import { BrowserView, MobileView, isBrowser, isMobile } from 'react-device-detect';
+import loading_gif from "../images/loading.gif";
 
 function App() {
   const [videoSrc, setSrc] = useState('');
@@ -33,9 +35,17 @@ function App() {
   let imgWidth = 380;
   let processingFlag = false;
   let processingMark = 1;
+  let mainTableClassName = '';
+
+  if (isMobile) {
+      mainTableClassName = 'main-table-mobile';
+  }else{
+      mainTableClassName = 'main-table-browser';
+  }
 
   useEffect(() => {
       const onPageLoad = () => {
+          // eslint-disable-next-line react-hooks/exhaustive-deps
           video = document.getElementById('videoElement');
 
           video.width = 380;
@@ -385,18 +395,12 @@ function App() {
   }
 
   function showProcessingBar() {
-      let mark = '';
-      let i = 1;
-      while (i <= processingMark) {
-          mark = mark + '.';
-          i ++;
-      }
-      setStatus('data processing' + mark);
-      processingMark ++;
-      if (processingMark === 7) processingMark =1;
+      setStatus('data processing');
       if (processingFlag) {
+          document.getElementById('load_gif').hidden = false;
           setTimeout(showProcessingBar, 500);
       }else{
+          document.getElementById('load_gif').hidden = true;
           setStatus('result showing');
       }
   }
@@ -553,7 +557,7 @@ function App() {
     <div className='App'>
       <header className='App-header'>
         <div>
-              <table className='main-table-browser'>
+              <table className={`${mainTableClassName}`}>
                   <tbody>
                       <tr>
                           <td id='videoTD1' colSpan='2'>
@@ -604,6 +608,7 @@ function App() {
                       </tr>
                       <tr>
                           <td>
+                              <div id='load_gif' hidden><img src={loading_gif} alt='loading' width='20' /><br /></div>
                               <div id='statusDiv' style={{fontSize: "16px"}}>
                                   status: {status}
                                   <div id='folder_name' hidden>{folder_name}</div>
