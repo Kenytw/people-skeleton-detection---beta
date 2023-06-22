@@ -8,6 +8,7 @@ import Stats from 'three/examples/jsm/libs/stats.module';
 import { GUI } from "three/addons/libs/lil-gui.module.min.js";
 import { useSearchParams } from "react-router-dom";
 import loading_gif from '../images/loading.gif';
+import body_pose from "./data/data.json";
 
 function Show3d() {
     const [searchparams] = useSearchParams();
@@ -335,8 +336,18 @@ function Show3d() {
     }
 
     function poseAngles(joint, frame_num) {
-        //if (pause === true) return;
         if (Object.keys(body_pose.result[frame_num]).length === 0) return;
+
+        if (body_pose.result[frame_num].landmark31.y < body_pose.result[frame_num].landmark23.y || body_pose.result[frame_num].landmark32.y < body_pose.result[frame_num].landmark24.y) {
+            if (joint === model.hips) {
+                frame++;
+                if (frame > Object.keys(body_pose.result).length - 1) frame = 0;
+                return;
+            }else{
+                return;
+            }
+        }
+
         const pose_left_shoulder = new THREE.Vector3(body_pose.result[frame_num].landmark11.x, -body_pose.result[frame_num].landmark11.y, -body_pose.result[frame_num].landmark11.z);
         const pose_right_shoulder = new THREE.Vector3(body_pose.result[frame_num].landmark12.x, -body_pose.result[frame_num].landmark12.y, -body_pose.result[frame_num].landmark12.z);
         const pose_left_elbow = new THREE.Vector3(body_pose.result[frame_num].landmark13.x, -body_pose.result[frame_num].landmark13.y, -body_pose.result[frame_num].landmark13.z);
@@ -452,21 +463,29 @@ function Show3d() {
             point_child = pose_left_hand_index_1;
         }
         else if (joint === model.left_up_leg) {
+            if (model.hips.rotation.y > 1 || model.hips.rotation.y < -1) return;
+
             point_parent = pose_hips;
             point_articulation = pose_left_hip;
             point_child = pose_left_knee;
         }
         else if (joint === model.right_up_leg) {
+            if (model.hips.rotation.y > 1 || model.hips.rotation.y < -1) return;
+
             point_parent = pose_hips;
             point_articulation = pose_right_hip;
             point_child = pose_right_knee;
         }
         else if (joint === model.left_leg) {
+            if (model.hips.rotation.y > 1 || model.hips.rotation.y < -1) return;
+
             point_parent = pose_left_hip;
             point_articulation = pose_left_knee;
             point_child = pose_left_ankle;
         }
         else if (joint === model.right_leg) {
+            if (model.hips.rotation.y > 1 || model.hips.rotation.y < -1) return;
+
             point_parent = pose_right_hip;
             point_articulation = pose_right_knee;
             point_child = pose_right_ankle;
@@ -573,6 +592,7 @@ function Show3d() {
         const arrowHelper2 = new THREE.ArrowHelper( vec_from.clone().normalize(), position1, length2, hex2 );
         //scene.add(arrowHelper2);
 
+        const jr = joint.rotation.clone();
         const pr = joint.parent.rotation.clone();
         const ppr = joint.parent.parent.rotation.clone();
         const pppr = joint.parent.parent.parent.rotation.clone();
