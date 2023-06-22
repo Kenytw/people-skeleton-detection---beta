@@ -26,6 +26,7 @@ function Show3d() {
     let panel;
     let render_width = window.innerWidth * 0.98;
     let render_height = 650;
+    let camera_rotate = true;
 
     useEffect(() => {
         if (folder_name !== null) getJson();
@@ -67,6 +68,7 @@ function Show3d() {
         settings = {
             'show model': true,
             'show skeleton': false,
+            'rotate camera': true,
             'pause/continue': pauseContinue,
             'make single step': toSingleStepMode,
             'modify time scale': 1.0
@@ -74,12 +76,17 @@ function Show3d() {
 
         folder1.add( settings, 'show model' ).onChange( showModel );
         folder1.add( settings, 'show skeleton' ).onChange( showSkeleton );
+        folder1.add( settings, 'rotate camera' ).onChange( rotateCamera );
         folder2.add( settings, 'pause/continue' );
         folder2.add( settings, 'make single step' );
         folder3.add( settings, 'modify time scale', 0.0, 1.5, 0.01 ).onChange( modifyTimeScale );
         folder1.open();
         folder2.open();
         folder3.open();
+    }
+
+    function rotateCamera() {
+        camera_rotate = !camera_rotate;
     }
 
     function pauseContinue() {
@@ -129,6 +136,11 @@ function Show3d() {
         mesh.rotation.x = - Math.PI / 2;
         mesh.receiveShadow = true;
         scene.add( mesh );
+
+        const grid = new THREE.GridHelper( 200, 40, 0x000000, 0x000000 );
+        grid.material.opacity = 0.2;
+        grid.material.transparent = true;
+        scene.add( grid );
 
         camera = new THREE.PerspectiveCamera(
             65,
@@ -286,6 +298,9 @@ function Show3d() {
         render();
     }
 
+    const offset = new THREE.Vector3();
+    const distance = 3;
+
     function animate() {
         interval = 1000 / fps;
         requestAnimationFrame(animate);
@@ -296,6 +311,15 @@ function Show3d() {
                 then = now - (delta % interval);
 
                 setupPos();
+
+                if (camera_rotate) {
+                    offset.x = distance * Math.sin(now * 0.0005);
+                    offset.z = distance * Math.cos(now * 0.0005);
+
+                    camera.position.copy(model.position).add(offset);
+                    camera.position.y = 1.5;
+                    camera.lookAt(model.position);
+                }
 
                 controls.update();
                 render();
